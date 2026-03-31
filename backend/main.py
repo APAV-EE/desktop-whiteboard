@@ -4,6 +4,7 @@ import psutil
 import GPUtil
 import string
 import os
+import subprocess
 
 app = FastAPI()
 
@@ -39,6 +40,19 @@ def get_all_disks():
                 continue
     return disks
     
+def get_gpu_temp():
+    try:
+        output = subprocess.check_output(
+            ["nvidia-smi", "-q", "-d", "TEMPERATURE"]
+        ).decode()
+
+        for line in output.split("\n"):
+            if "GPU Current Temp" in line:
+                return float(line.split(":")[1].replace("C", "").strip())
+    except Exception as e:
+        print("GPU ERROR:", e)
+        return None
+
 
 @app.get("/stats")
 def get_stats():
@@ -46,10 +60,12 @@ def get_stats():
     ram = psutil.virtual_memory().percent
     gpu = get_gpu_usage()
     disks = get_all_disks()
+    gpu_temp = get_gpu_temp()
 
     return {
         "cpu" : cpu,
         "ram" : ram,
         "disks" : disks,
-        "gpu" : gpu
+        "gpu" : gpu,
+        "gpu_temp" :gpu_temp
     }
